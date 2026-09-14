@@ -1,6 +1,13 @@
 import numpy as np
-
 import time
+import csv
+
+with open('Ex1-1.txt', mode='r', encoding='utf-8', newline='') as file:
+    csv_reader = csv.reader(file, delimiter='\t')
+    for row in csv_reader:
+        row = [int(val) if val.strip() != '' else 0 for val in row]
+        print(row)
+
 
 
 def move(grid, basePos, endPos):
