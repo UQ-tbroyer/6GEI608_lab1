@@ -2,14 +2,22 @@ import numpy as np
 import time
 import csv
 
+
+combined = []
+
 with open('Ex1-1.txt', mode='r', encoding='utf-8', newline='') as file:
     csv_reader = csv.reader(file, delimiter='\t')
     for row in csv_reader:
         row = [int(val) if val.strip() != '' else 0 for val in row]
-        print(row)
+        combined += row  # ajoute les éléments de row à la suite de combined
+
+combined = np.array(combined)
+print(combined)
 
 
 
+
+"""
 def move(grid, basePos, endPos):
     moveGrid = np.array([[1,0,0,0,0,0,0,0,0],
                         [0,1,0,0,0,0,0,0,0],
@@ -60,4 +68,6 @@ def breadthSearch():
     pass
 
 def iterativeDeepning():
+
     pass
+"""
