@@ -2,6 +2,7 @@ import numpy as np
 
 import time
 
+goalState = np.array([1,2,3,4,5,6,7,8,0])
 
 def move(grid, basePos, endPos):
     moveGrid = np.array([[1,0,0,0,0,0,0,0,0],
@@ -28,23 +29,58 @@ def move(grid, basePos, endPos):
 #print(move(np.array([0,2,3,1,4,5,6,7,8]), 3, 0))
 #print(move(np.array([0,2,3,1,4,5,6,7,8]), 3, 1))
 
-def isMovelegal(basePos, endPos, lenGrid):
-    if 
-    
+def isMovelegal(basePos, endPos, lenSide):
+    baseRow, baseCol = divmod(basePos, lenSide)
+    endRow, endCol = divmod(endPos, lenSide)
 
-def depthSearch(Grid):
-    frontier = []
+    return abs(baseRow - endRow) + abs(baseCol - endCol) == 1
+
+
+def legalMoves(basePos, lenSide):
+
+    row, col = divmod(basePos, lenSide)
+    moves = []
+
+    for dRow, dCol in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        newRow, newCol = row + dRow, col + dCol
+        if 0 <= newRow < lenSide and 0 <= newCol < lenSide:
+            moves.append(newRow * lenSide + newCol)
+
+    return moves  
+
+def depthSearch(grid):
+    frontier = np.empty((0, 9), dtype=int)
     tailleFrontier = []
-    nbState = 0
+    nbStateExplored = 0
+
     executionTime = 0
     startTime = time.time_ns()
 
-    goalState = np.array([1,2,3,4,5,6,7,8,0])
+    
+    while (not(np.array_equal(grid, goalState))):
+
+        posZero = int(np.where(grid == 0)[0][0])
+        possibleMoves = legalMoves(posZero, 3)
+
+        for i in range(len(possibleMoves)):
+            frontierAddition = move(grid, posZero, possibleMoves[i]).reshape(1, 9)
+            #frontierAddition = np.append(frontierAddition, move(grid, posZero, possibleMoves[i]))
+
+            frontier = np.concatenate((frontierAddition, frontier), axis=0)
+
+        grid = frontier[0]
+
+        tailleFrontier.append(frontier.size)
+
+        nbStateExplored += 1
+        print(nbStateExplored)
+        
+
 
     executionTime = time.time_ns() - startTime
 
 
-    return executionTime
+    return grid, executionTime, tailleFrontier, nbStateExplored
 
 print(depthSearch(np.array([0,2,3,1,4,5,6,7,8])))
 
