@@ -53,40 +53,87 @@ def depthSearch(grid):
     tailleFrontier = []
     nbStateExplored = 0
 
+    visited = set()   
+
     executionTime = 0
     startTime = time.time_ns()
 
     
     while (not(np.array_equal(grid, goalState))):
 
+        visited.add(tuple(grid)) 
+
         posZero = int(np.where(grid == 0)[0][0])
         possibleMoves = legalMoves(posZero, 3)
 
         for i in range(len(possibleMoves)):
             frontierAddition = move(grid, posZero, possibleMoves[i]).reshape(1, 9)
-            #frontierAddition = np.append(frontierAddition, move(grid, posZero, possibleMoves[i]))
+
+            if tuple(frontierAddition[0]) in visited: 
+                continue
 
             frontier = np.concatenate((frontierAddition, frontier), axis=0)
 
-        grid = frontier[0]
+        j = 0                                          
+        while tuple(frontier[j]) in visited:
+            j += 1
+        grid = frontier[j]
 
         tailleFrontier.append(frontier.size)
 
         nbStateExplored += 1
         print(nbStateExplored)
-        
-
 
     executionTime = time.time_ns() - startTime
-
 
     return grid, executionTime, tailleFrontier, nbStateExplored
 
 print(depthSearch(np.array([0,2,3,1,4,5,6,7,8])))
 
 
-def breadthSearch():
-    pass
+def breadthSearch(grid):
+    frontier = np.empty((0, 9), dtype=int)
+    tailleFrontier = []
+    nbStateExplored = 0
+
+    visited = set()   
+
+    executionTime = 0
+    startTime = time.time_ns()
+
+    
+    while (not(np.array_equal(grid, goalState))):
+
+        visited.add(tuple(grid)) 
+
+        posZero = int(np.where(grid == 0)[0][0])
+        possibleMoves = legalMoves(posZero, 3)
+
+        j = 0 
+
+        for i in range(len(possibleMoves)):
+            frontierAddition = move(grid, posZero, possibleMoves[i]).reshape(1, 9)
+
+            if tuple(frontierAddition[0]) in visited: 
+                continue
+
+            frontier = np.concatenate((frontier, frontierAddition), axis=0)
+
+                                                 
+        while tuple(frontier[j]) in visited:
+            j += 1
+        grid = frontier[j]
+
+        tailleFrontier.append(frontier.size)
+
+        nbStateExplored += 1
+        print(nbStateExplored)
+
+    executionTime = time.time_ns() - startTime
+
+    return grid, executionTime, tailleFrontier, nbStateExplored
+
+print(breadthSearch(np.array([0,2,3,1,4,5,6,7,8])))
 
 def iterativeDeepning():
     pass
