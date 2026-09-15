@@ -88,7 +88,7 @@ def depthSearch(grid):
 
     return grid, executionTime, tailleFrontier, nbStateExplored
 
-print(depthSearch(np.array([0,2,3,1,4,5,6,7,8])))
+#print(depthSearch(np.array([0,2,3,1,4,5,6,7,8])))
 
 
 def breadthSearch(grid):
@@ -133,7 +133,7 @@ def breadthSearch(grid):
 
     return grid, executionTime, tailleFrontier, nbStateExplored
 
-print(breadthSearch(np.array([0,2,3,1,4,5,6,7,8])))
+#print(breadthSearch(np.array([0,2,3,1,4,5,6,7,8])))
 
 def iterativeDeepning():
     pass
