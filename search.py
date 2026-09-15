@@ -2,6 +2,7 @@ import numpy as np
 import time
 import csv
 
+goalState = np.array([1,2,3,4,5,6,7,8,0])
 
 combined = []
 
@@ -41,77 +42,53 @@ def move(grid, basePos, endPos):
 #print(move(np.array([0,2,3,1,4,5,6,7,8]), 3, 0))
 #print(move(np.array([0,2,3,1,4,5,6,7,8]), 3, 1))
 
+def isMovelegal(basePos, endPos, lenSide):
+    baseRow, baseCol = divmod(basePos, lenSide)
+    endRow, endCol = divmod(endPos, lenSide)
 
-def isMovelegal(basePos, endPos, lenGrid):
-    """Vérifie si l'échange basePos <-> endPos correspond à un déplacement
-    valide de la case vide dans une grille carrée de côté lenGrid
-    (lenGrid=3 pour le 8-puzzle)."""
-    rowBase, colBase = divmod(basePos, lenGrid)
-    rowEnd, colEnd = divmod(endPos, lenGrid)
-
-    # même ligne, colonnes voisines (gauche/droite)
-    if rowBase == rowEnd and abs(colBase - colEnd) == 1:
-        return True
-    # même colonne, lignes voisines (haut/bas)
-    if colBase == colEnd and abs(rowBase - rowEnd) == 1:
-        return True
-    return False
+    return abs(baseRow - endRow) + abs(baseCol - endCol) == 1
 
 
-def getLegalMoves(grid, lenGrid=3):
-    """Retourne tous les états atteignables en un seul déplacement de la
-    case vide, à partir de `grid`, en utilisant move()."""
-    basePos = int(np.where(grid == 0)[0][0])
-    nextStates = []
-    for endPos in range(len(grid)):
-        if endPos != basePos and isMovelegal(basePos, endPos, lenGrid):
-            nextStates.append(move(grid, basePos, endPos))
-    return nextStates
+def legalMoves(basePos, lenSide):
 
+    row, col = divmod(basePos, lenSide)
+    moves = []
 
-# --------------------------------------------------------------------------
-# Recherche en largeur (BFS)
-# --------------------------------------------------------------------------
-def breadthSearch(Grid, outputFile="breadth_run.txt"):
-    frontier = [Grid]
+    for dRow, dCol in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        newRow, newCol = row + dRow, col + dCol
+        if 0 <= newRow < lenSide and 0 <= newCol < lenSide:
+            moves.append(newRow * lenSide + newCol)
+
+    return moves  
+
+def depthSearch(grid):
+    frontier = np.empty((0, 9), dtype=int)
     tailleFrontier = []
-    nbState = 0
+    nbStateExplored = 0
+
     executionTime = 0
     startTime = time.time_ns()
 
-    goalState = np.array([1,2,3,4,5,6,7,8,0])
+    
+    while (not(np.array_equal(grid, goalState))):
 
-    visited = {tuple(Grid)}
-    found = False
-    iteration = 0
+        posZero = int(np.where(grid == 0)[0][0])
+        possibleMoves = legalMoves(posZero, 3)
 
-    while frontier:
-        iteration += 1
-        tailleFrontier.append((iteration, len(frontier)))
+        for i in range(len(possibleMoves)):
+            frontierAddition = move(grid, posZero, possibleMoves[i]).reshape(1, 9)
+            #frontierAddition = np.append(frontierAddition, move(grid, posZero, possibleMoves[i]))
 
-        currentGrid = frontier.pop(0)  # FIFO -> recherche en largeur
-        nbState += 1
+            frontier = np.concatenate((frontierAddition, frontier), axis=0)
 
-        if np.array_equal(currentGrid, goalState):
-            found = True
-            break
+        grid = frontier[0]
 
-        for nextGrid in getLegalMoves(currentGrid):
-            key = tuple(nextGrid)
-            if key not in visited:
-                visited.add(key)
-                frontier.append(nextGrid)
+        tailleFrontier.append(frontier.size)
 
-    executionTime = time.time_ns() - startTime
-
-    with open(outputFile, mode='w', encoding='utf-8') as f:
-        for it, size in tailleFrontier:
-            f.write(f"{it}\t{size}\n")
-        f.write(f"{nbState}\n")
-        f.write(f"{executionTime}\n")
-
-    return executionTime, nbState, found
-
+        nbStateExplored += 1
+        print(nbStateExplored)
+        
+    return grid, executionTime, tailleFrontier, nbStateExplored
 
 # --------------------------------------------------------------------------
 # Recherche à approfondissement itératif (IDDFS)
