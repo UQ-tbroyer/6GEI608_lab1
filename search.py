@@ -5,13 +5,10 @@ import numpy as np
 
 goal_state = np.array([1, 2, 3, 4, 5, 6, 7, 8, 0])
 
-# Déplacement de la case vide : delta de position -> direction
 DIRECTIONS = {-3: "haut", 3: "bas", -1: "gauche", 1: "droite"}
 
 
-# --------------------------------------------------------------------------
-# Déplacement par matrice de permutation
-# --------------------------------------------------------------------------
+
 def move(grid, basePos, endPos):
     moveGrid = np.array([[1,0,0,0,0,0,0,0,0],
                         [0,1,0,0,0,0,0,0,0],
@@ -44,8 +41,7 @@ def legalMoves(basePos, lenSide=3):
 
 
 def getChildren(grid):
-    """Retourne les états voisins de `grid`, chacun avec l'action (direction
-    du déplacement de la case vide) qui y mène."""
+
     pos_zero = int(np.where(grid == 0)[0][0])
     children = []
     for end_pos in legalMoves(pos_zero):
@@ -56,8 +52,7 @@ def getChildren(grid):
 
 
 def reconstruct_path(came_from, start_state, goal_state_tuple):
-    """Remonte came_from depuis l'état objectif jusqu'à l'état initial pour
-    obtenir la liste ordonnée des actions à suivre."""
+    
     actions = []
     state = goal_state_tuple
     while state != start_state:
@@ -73,9 +68,6 @@ def _to_state(grid):
 
 
 def is_solvable(grid):
-    """Un 8-puzzle (plateau 3x3) est solvable vers l'objectif
-    [1,2,3,4,5,6,7,8,0] si et seulement si le nombre d'inversions
-    (en ignorant la case vide) est pair."""
     values = [v for v in grid if v != 0]
     inversions = sum(
         1
@@ -86,9 +78,6 @@ def is_solvable(grid):
     return inversions % 2 == 0
 
 
-# --------------------------------------------------------------------------
-# Recherche en profondeur (DFS) — frontière = vraie pile (list.pop())
-# --------------------------------------------------------------------------
 def depthSearch(start_state, output_path=False):
     start_state_tuple = _to_state(start_state)
     goal_state_tuple = _to_state(goal_state)
@@ -105,7 +94,7 @@ def depthSearch(start_state, output_path=False):
     while frontier:
         frontier_sizes.append(len(frontier))
 
-        current_state = frontier.pop()  # LIFO -> profondeur
+        current_state = frontier.pop()  
         if current_state in visited:
             continue
         visited.add(current_state)
@@ -132,9 +121,6 @@ def depthSearch(start_state, output_path=False):
     return final_grid, execution_time, frontier_sizes, nb_state_explored
 
 
-# --------------------------------------------------------------------------
-# Recherche en largeur (BFS) — frontière = vraie file (deque.popleft())
-# --------------------------------------------------------------------------
 def breadthSearch(start_state, output_path=False):
     start_state_tuple = _to_state(start_state)
     goal_state_tuple = _to_state(goal_state)
@@ -151,7 +137,7 @@ def breadthSearch(start_state, output_path=False):
     while frontier:
         frontier_sizes.append(len(frontier))
 
-        current_state = frontier.popleft()  # FIFO -> largeur
+        current_state = frontier.popleft() 
         nb_state_explored += 1
 
         if current_state == goal_state_tuple:
@@ -175,24 +161,17 @@ def breadthSearch(start_state, output_path=False):
     return final_grid, execution_time, frontier_sizes, nb_state_explored
 
 
-# --------------------------------------------------------------------------
-# Recherche en profondeur limitée + approfondissement itératif (IDDFS)
-# --------------------------------------------------------------------------
+
 OPPOSITE_ACTION = {"haut": "bas", "bas": "haut", "gauche": "droite", "droite": "gauche"}
 
 
 def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
-    # (état, profondeur, dernière action prise pour y arriver)
+
     frontier = [(start_state_tuple, 0, None)]
     frontier_sizes = []
     nb_state_explored = 0
 
-    # état -> profondeur la plus courte à laquelle il a déjà été atteint
-    # DANS CETTE PASSE. Contrairement à un simple "visited", ça permet de
-    # réexplorer un état si on l'atteint cette fois par un chemin plus
-    # court (donc avec plus de budget de profondeur restant) — sinon on
-    # risque de bloquer à tort un chemin qui mènerait à l'objectif dans
-    # la limite courante.
+ 
     best_depth = {start_state_tuple: 0}
     came_from = {}
 
@@ -210,9 +189,7 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
 
         if depth < limit:
             for child_grid, action in getChildren(np.array(current_state)):
-                # ne pas annuler immédiatement le dernier mouvement
-                # (repartir en arrière n'aide jamais et évite une
-                # explosion combinatoire inutile)
+                
                 if last_action is not None and action == OPPOSITE_ACTION[last_action]:
                     continue
 
@@ -227,9 +204,8 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
     return final_state, came_from, frontier_sizes, nb_state_explored
 
 
-def iterativeDeepning(start_state, output_path=False, max_limit=31):
-    # max_limit = garde-fou : 31 est la profondeur maximale possible pour
-    # n'importe quel état solvable du 8-puzzle.
+def iterativeDeepning(start_state, output_path=False, max_limit=10):
+    
     start_state_tuple = _to_state(start_state)
     goal_state_tuple = _to_state(goal_state)
 

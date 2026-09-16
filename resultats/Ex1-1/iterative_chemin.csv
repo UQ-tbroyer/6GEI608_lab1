@@ -2,15 +2,13 @@ bas
 droite
 haut
 gauche
-bas
 gauche
-haut
 haut
 droite
 droite
 bas
-bas
 gauche
+bas
 gauche
 haut
 droite
@@ -18,6 +16,6 @@ haut
 gauche
 bas
 droite
-bas
 droite
-Nombre de mouvements : 22
+bas
+Nombre de mouvements : 20
