@@ -72,6 +72,20 @@ def _to_state(grid):
     return tuple(int(x) for x in grid)
 
 
+def is_solvable(grid):
+    """Un 8-puzzle (plateau 3x3) est solvable vers l'objectif
+    [1,2,3,4,5,6,7,8,0] si et seulement si le nombre d'inversions
+    (en ignorant la case vide) est pair."""
+    values = [v for v in grid if v != 0]
+    inversions = sum(
+        1
+        for i in range(len(values))
+        for j in range(i + 1, len(values))
+        if values[i] > values[j]
+    )
+    return inversions % 2 == 0
+
+
 # --------------------------------------------------------------------------
 # Recherche en profondeur (DFS) — frontière = vraie pile (list.pop())
 # --------------------------------------------------------------------------
@@ -164,11 +178,22 @@ def breadthSearch(start_state, output_path=False):
 # --------------------------------------------------------------------------
 # Recherche en profondeur limitée + approfondissement itératif (IDDFS)
 # --------------------------------------------------------------------------
+OPPOSITE_ACTION = {"haut": "bas", "bas": "haut", "gauche": "droite", "droite": "gauche"}
+
+
 def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
-    frontier = [(start_state_tuple, 0)]  # (état, profondeur)
+    # (état, profondeur, dernière action prise pour y arriver)
+    frontier = [(start_state_tuple, 0, None)]
     frontier_sizes = []
     nb_state_explored = 0
-    visited = set()
+
+    # état -> profondeur la plus courte à laquelle il a déjà été atteint
+    # DANS CETTE PASSE. Contrairement à un simple "visited", ça permet de
+    # réexplorer un état si on l'atteint cette fois par un chemin plus
+    # court (donc avec plus de budget de profondeur restant) — sinon on
+    # risque de bloquer à tort un chemin qui mènerait à l'objectif dans
+    # la limite courante.
+    best_depth = {start_state_tuple: 0}
     came_from = {}
 
     final_state = None
@@ -176,10 +201,7 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
     while frontier:
         frontier_sizes.append(len(frontier))
 
-        current_state, depth = frontier.pop()
-        if current_state in visited:
-            continue
-        visited.add(current_state)
+        current_state, depth, last_action = frontier.pop()
         nb_state_explored += 1
 
         if current_state == goal_state_tuple:
@@ -188,11 +210,19 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
 
         if depth < limit:
             for child_grid, action in getChildren(np.array(current_state)):
+                # ne pas annuler immédiatement le dernier mouvement
+                # (repartir en arrière n'aide jamais et évite une
+                # explosion combinatoire inutile)
+                if last_action is not None and action == OPPOSITE_ACTION[last_action]:
+                    continue
+
                 child_state = _to_state(child_grid)
-                if child_state not in visited:
-                    if child_state not in came_from:
-                        came_from[child_state] = (current_state, action)
-                    frontier.append((child_state, depth + 1))
+                new_depth = depth + 1
+
+                if child_state not in best_depth or new_depth < best_depth[child_state]:
+                    best_depth[child_state] = new_depth
+                    came_from[child_state] = (current_state, action)
+                    frontier.append((child_state, new_depth, action))
 
     return final_state, came_from, frontier_sizes, nb_state_explored
 

@@ -27,7 +27,7 @@ def read_puzzle(file_path):
     return np.array(values, dtype=int)
 
 
-index = 1
+index = 4
 puzzle_file = f'Ex1-{index}.txt'
 start_state = read_puzzle(puzzle_file)
 
