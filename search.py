@@ -1,4 +1,5 @@
 import csv
+import os
 import time
 from collections import deque
 
@@ -82,8 +83,10 @@ def writeStatsFile(outputFile, tailleFrontier, nbStateExplored, executionTime):
         f.write(f"{executionTime}\n")
 
 
-def writePathFile(outputFile, path):
+def writePathFile(outputFile, path, exerciseName=None):
     with open(outputFile, mode='w', encoding='utf-8') as f:
+        if exerciseName:
+            f.write(f"Exercice : {exerciseName}\n\n")
         for action in path:
             f.write(f"{action}\n")
         f.write(f"Nombre de mouvements : {len(path)}\n")
@@ -243,14 +246,22 @@ def iterativeDeepning(grid, outputFile=None, maxLimit=31):
 # Lecture de l'état initial, chemin d'actions, puis 10 exécutions/algorithme
 # --------------------------------------------------------------------------
 if __name__ == "__main__":
+    INPUT_FILE = 'Ex1-1.txt'
+    RESULTS_DIR = 'resultats'
+    # Signature : nom de l'exercice déduit du fichier d'entrée (ex. "Ex1-1")
+    EXERCISE_NAME = os.path.splitext(os.path.basename(INPUT_FILE))[0]
+
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+
     combined = []
-    with open('Ex1-1.txt', mode='r', encoding='utf-8', newline='') as file:
+    with open(INPUT_FILE, mode='r', encoding='utf-8', newline='') as file:
         csv_reader = csv.reader(file, delimiter='\t')
         for row in csv_reader:
             row = [int(val) if val.strip() != '' else 0 for val in row]
             combined += row
 
     combined = np.array(combined)
+    print(f"Exercice : {EXERCISE_NAME}")
     print("État initial :", combined)
 
     algorithms = [
@@ -266,19 +277,24 @@ if __name__ == "__main__":
         found, path, execTime, _, nbState = algo(combined)
         if found is not None:
             print(f"{name:>10} : {len(path)} mouvements -> {path}")
-            writePathFile(f"{name}_chemin.txt", path)
+            pathFile = os.path.join(RESULTS_DIR, f"{EXERCISE_NAME}_{name}_chemin.txt")
+            writePathFile(pathFile, path, exerciseName=EXERCISE_NAME)
         else:
             print(f"{name:>10} : objectif NON trouvé")
 
     # 2) N.B. de l'énoncé : 10 exécutions par algorithme, un fichier de
     #    statistiques distinct par exécution (temps, taille de frontière,
-    #    nombre d'états explorés).
+    #    nombre d'états explorés). Le format de ce fichier est imposé par
+    #    l'énoncé (1re ligne = itération 1, avant-dernière = nb d'états,
+    #    dernière = temps) : la signature ne peut donc pas être ajoutée
+    #    en en-tête sans casser ce format. Elle est plutôt intégrée dans
+    #    le nom du fichier lui-même.
     NB_RUNS = 10
     print("\n=== Statistiques (10 exécutions par algorithme) ===")
     for name, algo in algorithms:
         print(f"\n--- {name} ---")
         for run in range(1, NB_RUNS + 1):
-            outFile = f"{name}_run_{run}.txt"
+            outFile = os.path.join(RESULTS_DIR, f"{EXERCISE_NAME}_{name}_run_{run}.txt")
             found, _, execTime, tailleFrontier, nbState = algo(combined, outputFile=outFile)
 
             status = "trouvé" if found is not None else "NON trouvé"
