@@ -25,9 +25,9 @@ def read_puzzle(file_path):
     return np.array(values, dtype=int)
 
 
-for index in range(1, 1):
-    puzzle_file = f'Ex1-{index}.txt'
-    start_state = read_puzzle(puzzle_file)
-    result = search.depthSearch(start_state)
-    final_grid, execution_time, frontier_sizes, nb_state_explored = result
-    data.writeData(index, 'depth', execution_time, frontier_sizes, nb_state_explored)
+index = 1
+puzzle_file = f'Ex1-{index}.txt'
+start_state = read_puzzle(puzzle_file)
+result = search.depthSearch(start_state)
+final_grid, execution_time, frontier_sizes, nb_state_explored = result
+data.writeData(index, 'depth', execution_time, frontier_sizes, nb_state_explored)
