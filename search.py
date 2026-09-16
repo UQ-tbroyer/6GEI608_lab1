@@ -1,18 +1,16 @@
-import csv
-import os
 import time
 from collections import deque
 
 import numpy as np
 
-goalState = np.array([1, 2, 3, 4, 5, 6, 7, 8, 0])
+goal_state = np.array([1, 2, 3, 4, 5, 6, 7, 8, 0])
 
 # Déplacement de la case vide : delta de position -> direction
 DIRECTIONS = {-3: "haut", 3: "bas", -1: "gauche", 1: "droite"}
 
 
 # --------------------------------------------------------------------------
-# Déplacement par matrice de permutation (conservé tel quel)
+# Déplacement par matrice de permutation
 # --------------------------------------------------------------------------
 def move(grid, basePos, endPos):
     moveGrid = np.array([[1,0,0,0,0,0,0,0,0],
@@ -48,257 +46,184 @@ def legalMoves(basePos, lenSide=3):
 def getChildren(grid):
     """Retourne les états voisins de `grid`, chacun avec l'action (direction
     du déplacement de la case vide) qui y mène."""
-    posZero = int(np.where(grid == 0)[0][0])
+    pos_zero = int(np.where(grid == 0)[0][0])
     children = []
-    for endPos in legalMoves(posZero):
-        newGrid = move(grid, posZero, endPos)
-        action = DIRECTIONS[endPos - posZero]
-        children.append((newGrid, action))
+    for end_pos in legalMoves(pos_zero):
+        new_grid = move(grid, pos_zero, end_pos)
+        action = DIRECTIONS[end_pos - pos_zero]
+        children.append((new_grid, action))
     return children
 
 
-def reconstructPath(cameFrom, startState, goalState_):
-    """Remonte cameFrom depuis l'état objectif jusqu'à l'état initial pour
+def reconstruct_path(came_from, start_state, goal_state_tuple):
+    """Remonte came_from depuis l'état objectif jusqu'à l'état initial pour
     obtenir la liste ordonnée des actions à suivre."""
     actions = []
-    state = goalState_
-    while state != startState:
-        parentState, action = cameFrom[state]
+    state = goal_state_tuple
+    while state != start_state:
+        parent_state, action = came_from[state]
         actions.append(action)
-        state = parentState
+        state = parent_state
     actions.reverse()
     return actions
 
 
-def writeStatsFile(outputFile, tailleFrontier, nbStateExplored, executionTime):
-    """Format demandé par l'énoncé :
-    - une ligne par itération : numéro_itération \t taille_de_frontiere
-    - avant-dernière ligne     : nombre total d'états explorés
-    - dernière ligne           : temps d'exécution
-    """
-    with open(outputFile, mode='w', encoding='utf-8') as f:
-        for iteration, taille in enumerate(tailleFrontier, start=1):
-            f.write(f"{iteration}\t{taille}\n")
-        f.write(f"{nbStateExplored}\n")
-        f.write(f"{executionTime}\n")
-
-
-def writePathFile(outputFile, path, exerciseName=None):
-    with open(outputFile, mode='w', encoding='utf-8') as f:
-        if exerciseName:
-            f.write(f"Exercice : {exerciseName}\n\n")
-        for action in path:
-            f.write(f"{action}\n")
-        f.write(f"Nombre de mouvements : {len(path)}\n")
+def _to_state(grid):
+    return tuple(int(x) for x in grid)
 
 
 # --------------------------------------------------------------------------
 # Recherche en profondeur (DFS) — frontière = vraie pile (list.pop())
 # --------------------------------------------------------------------------
-def depthSearch(grid, outputFile=None):
-    startState = tuple(int(x) for x in grid)
-    frontier = [startState]
-    tailleFrontier = []
-    nbStateExplored = 0
-    visited = set()
-    cameFrom = {}
+def depthSearch(start_state, output_path=False):
+    start_state_tuple = _to_state(start_state)
+    goal_state_tuple = _to_state(goal_state)
 
-    startTime = time.time_ns()
-    found = None
+    frontier = [start_state_tuple]
+    frontier_sizes = []
+    nb_state_explored = 0
+    visited = set()
+    came_from = {}
+
+    start_time = time.time_ns()
+    final_state = None
 
     while frontier:
-        tailleFrontier.append(len(frontier))
+        frontier_sizes.append(len(frontier))
 
-        currentState = frontier.pop()  # LIFO -> profondeur
-        if currentState in visited:
+        current_state = frontier.pop()  # LIFO -> profondeur
+        if current_state in visited:
             continue
-        visited.add(currentState)
-        nbStateExplored += 1
+        visited.add(current_state)
+        nb_state_explored += 1
 
-        if currentState == tuple(int(x) for x in goalState):
-            found = currentState
+        if current_state == goal_state_tuple:
+            final_state = current_state
             break
 
-        for childGrid, action in getChildren(np.array(currentState)):
-            childState = tuple(int(x) for x in childGrid)
-            if childState not in visited:
-                if childState not in cameFrom:
-                    cameFrom[childState] = (currentState, action)
-                frontier.append(childState)
+        for child_grid, action in getChildren(np.array(current_state)):
+            child_state = _to_state(child_grid)
+            if child_state not in visited:
+                if child_state not in came_from:
+                    came_from[child_state] = (current_state, action)
+                frontier.append(child_state)
 
-    executionTime = time.time_ns() - startTime
-    path = reconstructPath(cameFrom, startState, found) if found else None
+    execution_time = time.time_ns() - start_time
+    final_grid = np.array(final_state) if final_state is not None else None
 
-    if outputFile:
-        writeStatsFile(outputFile, tailleFrontier, nbStateExplored, executionTime)
+    if output_path:
+        path = reconstruct_path(came_from, start_state_tuple, final_state) if final_state else None
+        return final_grid, execution_time, frontier_sizes, nb_state_explored, path
 
-    return found, path, executionTime, tailleFrontier, nbStateExplored
+    return final_grid, execution_time, frontier_sizes, nb_state_explored
 
 
 # --------------------------------------------------------------------------
 # Recherche en largeur (BFS) — frontière = vraie file (deque.popleft())
 # --------------------------------------------------------------------------
-def breadthSearch(grid, outputFile=None):
-    startState = tuple(int(x) for x in grid)
-    frontier = deque([startState])
-    tailleFrontier = []
-    nbStateExplored = 0
-    visited = {startState}
-    cameFrom = {}
+def breadthSearch(start_state, output_path=False):
+    start_state_tuple = _to_state(start_state)
+    goal_state_tuple = _to_state(goal_state)
 
-    goalTuple = tuple(int(x) for x in goalState)
+    frontier = deque([start_state_tuple])
+    frontier_sizes = []
+    nb_state_explored = 0
+    visited = {start_state_tuple}
+    came_from = {}
 
-    startTime = time.time_ns()
-    found = None
+    start_time = time.time_ns()
+    final_state = None
 
     while frontier:
-        tailleFrontier.append(len(frontier))
+        frontier_sizes.append(len(frontier))
 
-        currentState = frontier.popleft()  # FIFO -> largeur
-        nbStateExplored += 1
+        current_state = frontier.popleft()  # FIFO -> largeur
+        nb_state_explored += 1
 
-        if currentState == goalTuple:
-            found = currentState
+        if current_state == goal_state_tuple:
+            final_state = current_state
             break
 
-        for childGrid, action in getChildren(np.array(currentState)):
-            childState = tuple(int(x) for x in childGrid)
-            if childState not in visited:
-                visited.add(childState)
-                cameFrom[childState] = (currentState, action)
-                frontier.append(childState)
+        for child_grid, action in getChildren(np.array(current_state)):
+            child_state = _to_state(child_grid)
+            if child_state not in visited:
+                visited.add(child_state)
+                came_from[child_state] = (current_state, action)
+                frontier.append(child_state)
 
-    executionTime = time.time_ns() - startTime
-    path = reconstructPath(cameFrom, startState, found) if found else None
+    execution_time = time.time_ns() - start_time
+    final_grid = np.array(final_state) if final_state is not None else None
 
-    if outputFile:
-        writeStatsFile(outputFile, tailleFrontier, nbStateExplored, executionTime)
+    if output_path:
+        path = reconstruct_path(came_from, start_state_tuple, final_state) if final_state else None
+        return final_grid, execution_time, frontier_sizes, nb_state_explored, path
 
-    return found, path, executionTime, tailleFrontier, nbStateExplored
+    return final_grid, execution_time, frontier_sizes, nb_state_explored
 
 
 # --------------------------------------------------------------------------
 # Recherche en profondeur limitée + approfondissement itératif (IDDFS)
 # --------------------------------------------------------------------------
-def depthLimitedSearch(grid, limit):
-    startState = tuple(int(x) for x in grid)
-    frontier = [(startState, 0)]  # (état, profondeur)
-    tailleFrontier = []
-    nbStateExplored = 0
+def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
+    frontier = [(start_state_tuple, 0)]  # (état, profondeur)
+    frontier_sizes = []
+    nb_state_explored = 0
     visited = set()
-    cameFrom = {}
+    came_from = {}
 
-    goalTuple = tuple(int(x) for x in goalState)
-
-    found = None
+    final_state = None
 
     while frontier:
-        tailleFrontier.append(len(frontier))
+        frontier_sizes.append(len(frontier))
 
-        currentState, depth = frontier.pop()
-        if currentState in visited:
+        current_state, depth = frontier.pop()
+        if current_state in visited:
             continue
-        visited.add(currentState)
-        nbStateExplored += 1
+        visited.add(current_state)
+        nb_state_explored += 1
 
-        if currentState == goalTuple:
-            found = currentState
+        if current_state == goal_state_tuple:
+            final_state = current_state
             break
 
         if depth < limit:
-            for childGrid, action in getChildren(np.array(currentState)):
-                childState = tuple(int(x) for x in childGrid)
-                if childState not in visited:
-                    if childState not in cameFrom:
-                        cameFrom[childState] = (currentState, action)
-                    frontier.append((childState, depth + 1))
+            for child_grid, action in getChildren(np.array(current_state)):
+                child_state = _to_state(child_grid)
+                if child_state not in visited:
+                    if child_state not in came_from:
+                        came_from[child_state] = (current_state, action)
+                    frontier.append((child_state, depth + 1))
 
-    path = reconstructPath(cameFrom, startState, found) if found else None
-    return found, path, tailleFrontier, nbStateExplored
+    return final_state, came_from, frontier_sizes, nb_state_explored
 
 
-def iterativeDeepning(grid, outputFile=None, maxLimit=31):
-    # maxLimit = garde-fou : 31 est la profondeur maximale possible
-    # pour n'importe quel état solvable du 8-puzzle.
+def iterativeDeepning(start_state, output_path=False, max_limit=31):
+    # max_limit = garde-fou : 31 est la profondeur maximale possible pour
+    # n'importe quel état solvable du 8-puzzle.
+    start_state_tuple = _to_state(start_state)
+    goal_state_tuple = _to_state(goal_state)
+
     limit = 0
-    tailleFrontier = []
-    nbStateExplored = 0
-    found = None
-    path = None
+    frontier_sizes = []
+    nb_state_explored = 0
+    final_state = None
+    came_from = {}
 
-    startTime = time.time_ns()
+    start_time = time.time_ns()
 
-    while found is None and limit <= maxLimit:
-        found, path, tailleFrontierLimit, nbStateLimit = depthLimitedSearch(grid, limit)
-        tailleFrontier += tailleFrontierLimit
-        nbStateExplored += nbStateLimit
+    while final_state is None and limit <= max_limit:
+        final_state, came_from, sizes_at_limit, nb_at_limit = _depth_limited_search(
+            start_state_tuple, goal_state_tuple, limit
+        )
+        frontier_sizes += sizes_at_limit
+        nb_state_explored += nb_at_limit
         limit += 1
 
-    executionTime = time.time_ns() - startTime
+    execution_time = time.time_ns() - start_time
+    final_grid = np.array(final_state) if final_state is not None else None
 
-    if outputFile:
-        writeStatsFile(outputFile, tailleFrontier, nbStateExplored, executionTime)
+    if output_path:
+        path = reconstruct_path(came_from, start_state_tuple, final_state) if final_state else None
+        return final_grid, execution_time, frontier_sizes, nb_state_explored, path
 
-    return found, path, executionTime, tailleFrontier, nbStateExplored
-
-
-# --------------------------------------------------------------------------
-# Lecture de l'état initial, chemin d'actions, puis 10 exécutions/algorithme
-# --------------------------------------------------------------------------
-if __name__ == "__main__":
-    INPUT_FILE = 'Ex1-1.txt'
-    RESULTS_DIR = 'resultats'
-    # Signature : nom de l'exercice déduit du fichier d'entrée (ex. "Ex1-1")
-    EXERCISE_NAME = os.path.splitext(os.path.basename(INPUT_FILE))[0]
-
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-
-    combined = []
-    with open(INPUT_FILE, mode='r', encoding='utf-8', newline='') as file:
-        csv_reader = csv.reader(file, delimiter='\t')
-        for row in csv_reader:
-            row = [int(val) if val.strip() != '' else 0 for val in row]
-            combined += row
-
-    combined = np.array(combined)
-    print(f"Exercice : {EXERCISE_NAME}")
-    print("État initial :", combined)
-
-    algorithms = [
-        ("depth", depthSearch),
-        ("breadth", breadthSearch),
-        ("iterative", iterativeDeepning),
-    ]
-
-    # 1) Exigence principale de l'énoncé : le chemin des actions à suivre
-    #    pour aller de l'état initial à l'état objectif.
-    print("\n=== Chemin des actions (une résolution par algorithme) ===")
-    for name, algo in algorithms:
-        found, path, execTime, _, nbState = algo(combined)
-        if found is not None:
-            print(f"{name:>10} : {len(path)} mouvements -> {path}")
-            pathFile = os.path.join(RESULTS_DIR, f"{EXERCISE_NAME}_{name}_chemin.txt")
-            writePathFile(pathFile, path, exerciseName=EXERCISE_NAME)
-        else:
-            print(f"{name:>10} : objectif NON trouvé")
-
-    # 2) N.B. de l'énoncé : 10 exécutions par algorithme, un fichier de
-    #    statistiques distinct par exécution (temps, taille de frontière,
-    #    nombre d'états explorés). Le format de ce fichier est imposé par
-    #    l'énoncé (1re ligne = itération 1, avant-dernière = nb d'états,
-    #    dernière = temps) : la signature ne peut donc pas être ajoutée
-    #    en en-tête sans casser ce format. Elle est plutôt intégrée dans
-    #    le nom du fichier lui-même.
-    NB_RUNS = 10
-    print("\n=== Statistiques (10 exécutions par algorithme) ===")
-    for name, algo in algorithms:
-        print(f"\n--- {name} ---")
-        for run in range(1, NB_RUNS + 1):
-            outFile = os.path.join(RESULTS_DIR, f"{EXERCISE_NAME}_{name}_run_{run}.txt")
-            found, _, execTime, tailleFrontier, nbState = algo(combined, outputFile=outFile)
-
-            status = "trouvé" if found is not None else "NON trouvé"
-            print(
-                f"Run {run:2d} | temps: {execTime:>12} ns | "
-                f"états explorés: {nbState:>6} | objectif {status} | -> {outFile}"
-            )
+    return final_grid, execution_time, frontier_sizes, nb_state_explored
