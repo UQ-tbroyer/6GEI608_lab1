@@ -27,13 +27,10 @@ def read_puzzle(file_path):
     return np.array(values, dtype=int)
 
 
-#index = 4
 for index in range(1,5):
     puzzle_file = f'Ex1-{index}.txt'
     start_state = read_puzzle(puzzle_file)
 
-    # Dossier propre à cet exercice : sert de signature (puisque le nom des
-    # fichiers produits par writeData ne contient plus l'index de l'exercice).
     output_dir = os.path.join("resultats", f"Ex1-{index}")
 
     algorithms = [
@@ -42,8 +39,7 @@ for index in range(1,5):
         ('iterative', search.iterativeDeepning),
     ]
 
-    # 1) Chemin des actions à suivre pour atteindre l'état objectif
-    #    (exigence principale de l'énoncé), une résolution par algorithme.
+
     print(f"État initial (Ex1-{index}) :", start_state)
     print("\n=== Chemin des actions ===")
     for name, algo in algorithms:
@@ -56,8 +52,7 @@ for index in range(1,5):
         else:
             print(f"{name:>10} : objectif NON trouvé")
 
-    # 2) 10 exécutions par algorithme pour les statistiques de performance
-    #    (temps, taille de frontière, nombre d'états explorés).
+
     NB_RUNS = 10
     print("\n=== Statistiques (10 exécutions par algorithme) ===")
     for name, algo in algorithms:
