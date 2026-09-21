@@ -234,7 +234,7 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
     return final_state, came_from, frontier_sizes, nb_state_explored
 
 
-def iterativeDeepning(start_state, output_path=False, max_limit=10):
+def iterativeDeepning(start_state, output_path=False, max_limit=31):
     
     start_state_tuple = _to_state(start_state)
     goal_state_tuple = _to_state(goal_state)
