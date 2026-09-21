@@ -1,3 +1,17 @@
+Thomas BISSONNETTE-ROYER (BIST15100300) 
+Émeric RENAUD (RENE05030000) 
+
+Laboratoire #1 
+6GEI608—Intelligence artificielle et reconnaissance des formes 
+
+Travail présenté à 
+M. Oussama Jebbar 
+et 
+M. Mikael Brassard 
+
+Département des sciences appliquées 
+Université du Québec à Chicoutimi 
+
 Ce que nous avons appris 
 
 Dans le cadre de ce laboratoire, nous avons appris comment implémenter plusieurs algorithmes de recherche différents comme la recherche en profondeur, en largeur et à approfondissement itératif. De cette façon, il a été possible de pouvoir visualiser ce que représente vraiment la complexité de résolution (autant spatiale que temporelle). En effet, même si notre solution finale résolvait les puzzles dans des délais acceptables, cela n’était pas le cas de notre première version qui continuait pour une longue période. Ensuite, il a également été possible de voir comment traduire un problème réel en une solution par graphe. De plus, nous avons pu apprendre que certains problèmes tels que l'exercice 3 n'avaient pas de solution et donc il était nécessaire d'ajouter un garde-fou afin que l'algorithme ne s'effectue pas à l'infini. 
