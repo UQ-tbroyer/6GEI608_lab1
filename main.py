@@ -57,7 +57,7 @@ for index in range(1,5):
             print(f"{name:>10} : objectif NON trouvé")
 
     # 2) 10 exécutions par algorithme pour les statistiques de performance
-    #    (temps, taille de frontière, nombre d'états explorés).
+    #    (temps, nombre cumulé d'états générés, nombre d'états explorés).
     NB_RUNS = 10
     print("\n=== Statistiques (10 exécutions par algorithme) ===")
     for name, algo in algorithms:

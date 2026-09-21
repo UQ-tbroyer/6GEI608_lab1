@@ -3,6 +3,7 @@ import os
 
 
 def writeData(numTry, searchName, executionTime, tailleFrontier, nbStateExplored, outputDir="resultats"):
+    os.makedirs(outputDir, exist_ok=True)
     fileName = os.path.join(outputDir, f"{searchName}_essai{numTry}.csv")
 
     with open(fileName, "w", newline="") as f:
@@ -28,3 +29,4 @@ def writePath(searchName, path, outputDir="resultats"):
         writer.writerow([f"Nombre de mouvements : {len(path)}"])
 
     return fileName
+

@@ -100,7 +100,9 @@ def depthSearch(start_state, output_path=False):
     goal_state_tuple = _to_state(goal_state)
 
     frontier = [start_state_tuple]
+    pending = [0]
     frontier_sizes = []
+    generated_states = 1
     nb_state_explored = 0
     visited = set()
     came_from = {}
@@ -108,10 +110,10 @@ def depthSearch(start_state, output_path=False):
     start_time = time.time_ns()
     final_state = None
 
-    while frontier:
-        frontier_sizes.append(len(frontier))
+    while pending:
+        frontier_sizes.append(generated_states)
 
-        current_state = frontier.pop()  
+        current_state = frontier[pending.pop()]
         if current_state in visited:
             continue
         visited.add(current_state)
@@ -127,6 +129,8 @@ def depthSearch(start_state, output_path=False):
                 if child_state not in came_from:
                     came_from[child_state] = (current_state, action)
                 frontier.append(child_state)
+                pending.append(len(frontier) - 1)
+                generated_states += 1
 
     execution_time = time.time_ns() - start_time
     final_grid = np.array(final_state) if final_state is not None else None
@@ -142,8 +146,10 @@ def breadthSearch(start_state, output_path=False):
     start_state_tuple = _to_state(start_state)
     goal_state_tuple = _to_state(goal_state)
 
-    frontier = deque([start_state_tuple])
+    frontier = [start_state_tuple]
+    next_frontier_index = 0
     frontier_sizes = []
+    generated_states = 1
     nb_state_explored = 0
     visited = {start_state_tuple}
     came_from = {}
@@ -151,10 +157,11 @@ def breadthSearch(start_state, output_path=False):
     start_time = time.time_ns()
     final_state = None
 
-    while frontier:
-        frontier_sizes.append(len(frontier))
+    while next_frontier_index < len(frontier):
+        frontier_sizes.append(generated_states)
 
-        current_state = frontier.popleft() 
+        current_state = frontier[next_frontier_index]
+        next_frontier_index += 1
         nb_state_explored += 1
 
         if current_state == goal_state_tuple:
@@ -167,6 +174,7 @@ def breadthSearch(start_state, output_path=False):
                 visited.add(child_state)
                 came_from[child_state] = (current_state, action)
                 frontier.append(child_state)
+                generated_states += 1
 
     execution_time = time.time_ns() - start_time
     final_grid = np.array(final_state) if final_state is not None else None
@@ -185,7 +193,9 @@ OPPOSITE_ACTION = {"haut": "bas", "bas": "haut", "gauche": "droite", "droite": "
 def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
 
     frontier = [(start_state_tuple, 0, None)]
+    pending = [0]
     frontier_sizes = []
+    generated_states = 1
     nb_state_explored = 0
 
  
@@ -194,10 +204,11 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
 
     final_state = None
 
-    while frontier:
-        frontier_sizes.append(len(frontier))
+    while pending:
+        frontier_sizes.append(generated_states)
 
-        current_state, depth, last_action = frontier.pop()
+        current_index = pending.pop()
+        current_state, depth, last_action = frontier[current_index]
         nb_state_explored += 1
 
         if current_state == goal_state_tuple:
@@ -217,6 +228,8 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
                     best_depth[child_state] = new_depth
                     came_from[child_state] = (current_state, action)
                     frontier.append((child_state, new_depth, action))
+                    pending.append(len(frontier) - 1)
+                    generated_states += 1
 
     return final_state, came_from, frontier_sizes, nb_state_explored
 
@@ -238,7 +251,8 @@ def iterativeDeepning(start_state, output_path=False, max_limit=10):
         final_state, came_from, sizes_at_limit, nb_at_limit = _depth_limited_search(
             start_state_tuple, goal_state_tuple, limit
         )
-        frontier_sizes += sizes_at_limit
+        previous_generated = frontier_sizes[-1] if frontier_sizes else 0
+        frontier_sizes += [previous_generated + size for size in sizes_at_limit]
         nb_state_explored += nb_at_limit
         limit += 1
 
