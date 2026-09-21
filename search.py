@@ -1,8 +1,15 @@
+import time
+from collections import deque
+
 import numpy as np
+
+goal_state = np.array([1, 2, 3, 4, 5, 6, 7, 8, 0])
+
+DIRECTIONS = {-3: "haut", 3: "bas", -1: "gauche", 1: "droite"}
+
 import time
 import csv
 
-goalState = np.array([1,2,3,4,5,6,7,8,0])
 
 combined = []
 
@@ -39,149 +46,207 @@ def move(grid, basePos, endPos):
     return np.transpose(grid) @ moveGrid
 
 
-#print(move(np.array([0,2,3,1,4,5,6,7,8]), 3, 0))
-#print(move(np.array([0,2,3,1,4,5,6,7,8]), 3, 1))
-
 def isMovelegal(basePos, endPos, lenSide):
     baseRow, baseCol = divmod(basePos, lenSide)
     endRow, endCol = divmod(endPos, lenSide)
-
     return abs(baseRow - endRow) + abs(baseCol - endCol) == 1
 
 
-def legalMoves(basePos, lenSide):
+def legalMoves(basePos, lenSide=3):
+    return [endPos for endPos in range(lenSide * lenSide)
+            if endPos != basePos and isMovelegal(basePos, endPos, lenSide)]
 
-    row, col = divmod(basePos, lenSide)
-    moves = []
 
-    for dRow, dCol in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-        newRow, newCol = row + dRow, col + dCol
-        if 0 <= newRow < lenSide and 0 <= newCol < lenSide:
-            moves.append(newRow * lenSide + newCol)
+def getChildren(grid):
 
-    return moves  
+    pos_zero = int(np.where(grid == 0)[0][0])
+    children = []
+    for end_pos in legalMoves(pos_zero):
+        new_grid = move(grid, pos_zero, end_pos)
+        action = DIRECTIONS[end_pos - pos_zero]
+        children.append((new_grid, action))
+    return children
 
-def depthSearch(grid):
-    frontier = np.empty((0, 9), dtype=int)
-    tailleFrontier = []
-    nbStateExplored = 0
 
-    executionTime = 0
-    startTime = time.time_ns()
-
+def reconstruct_path(came_from, start_state, goal_state_tuple):
     
-    while (not(np.array_equal(grid, goalState))):
+    actions = []
+    state = goal_state_tuple
+    while state != start_state:
+        parent_state, action = came_from[state]
+        actions.append(action)
+        state = parent_state
+    actions.reverse()
+    return actions
 
-        posZero = int(np.where(grid == 0)[0][0])
-        possibleMoves = legalMoves(posZero, 3)
 
-        for i in range(len(possibleMoves)):
-            frontierAddition = move(grid, posZero, possibleMoves[i]).reshape(1, 9)
-            #frontierAddition = np.append(frontierAddition, move(grid, posZero, possibleMoves[i]))
+def _to_state(grid):
+    return tuple(int(x) for x in grid)
 
-            frontier = np.concatenate((frontierAddition, frontier), axis=0)
 
-        grid = frontier[0]
+def is_solvable(grid):
+    values = [v for v in grid if v != 0]
+    inversions = sum(
+        1
+        for i in range(len(values))
+        for j in range(i + 1, len(values))
+        if values[i] > values[j]
+    )
+    return inversions % 2 == 0
 
-        tailleFrontier.append(frontier.size)
 
-        nbStateExplored += 1
-        print(nbStateExplored)
-        
-    return grid, executionTime, tailleFrontier, nbStateExplored
+def depthSearch(start_state, output_path=False):
+    start_state_tuple = _to_state(start_state)
+    goal_state_tuple = _to_state(goal_state)
 
-# --------------------------------------------------------------------------
-# Recherche à approfondissement itératif (IDDFS)
-# --------------------------------------------------------------------------
-def depthLimitedSearch(Grid, limit, startIteration, startNbState, tailleFrontier):
-    """Une seule passe de recherche en profondeur limitée à `limit`.
-    Reprend le compteur d'itérations et le nombre d'états explorés là où
-    la passe précédente (limite plus basse) s'est arrêtée, pour que le
-    fichier de sortie reflète l'exécution complète de l'IDDFS."""
-    goalState = np.array([1,2,3,4,5,6,7,8,0])
+    frontier = [start_state_tuple]
+    frontier_sizes = []
+    nb_state_explored = 0
+    visited = set()
+    came_from = {}
 
-    stack = [(Grid, 0)]  # (état, profondeur)
-    visited = {tuple(Grid)}  # réinitialisé à chaque nouvelle limite
+    start_time = time.time_ns()
+    final_state = None
 
-    iteration = startIteration
-    nbState = startNbState
-    found = False
+    while frontier:
+        frontier_sizes.append(len(frontier))
 
-    while stack:
-        iteration += 1
-        tailleFrontier.append((iteration, len(stack)))
+        current_state = frontier.pop()  
+        if current_state in visited:
+            continue
+        visited.add(current_state)
+        nb_state_explored += 1
 
-        currentGrid, depth = stack.pop()  # LIFO -> recherche en profondeur
-        nbState += 1
+        if current_state == goal_state_tuple:
+            final_state = current_state
+            break
 
-        if np.array_equal(currentGrid, goalState):
-            found = True
+        for child_grid, action in getChildren(np.array(current_state)):
+            child_state = _to_state(child_grid)
+            if child_state not in visited:
+                if child_state not in came_from:
+                    came_from[child_state] = (current_state, action)
+                frontier.append(child_state)
+
+    execution_time = time.time_ns() - start_time
+    final_grid = np.array(final_state) if final_state is not None else None
+
+    if output_path:
+        path = reconstruct_path(came_from, start_state_tuple, final_state) if final_state else None
+        return final_grid, execution_time, frontier_sizes, nb_state_explored, path
+
+    return final_grid, execution_time, frontier_sizes, nb_state_explored
+
+
+def breadthSearch(start_state, output_path=False):
+    start_state_tuple = _to_state(start_state)
+    goal_state_tuple = _to_state(goal_state)
+
+    frontier = deque([start_state_tuple])
+    frontier_sizes = []
+    nb_state_explored = 0
+    visited = {start_state_tuple}
+    came_from = {}
+
+    start_time = time.time_ns()
+    final_state = None
+
+    while frontier:
+        frontier_sizes.append(len(frontier))
+
+        current_state = frontier.popleft() 
+        nb_state_explored += 1
+
+        if current_state == goal_state_tuple:
+            final_state = current_state
+            break
+
+        for child_grid, action in getChildren(np.array(current_state)):
+            child_state = _to_state(child_grid)
+            if child_state not in visited:
+                visited.add(child_state)
+                came_from[child_state] = (current_state, action)
+                frontier.append(child_state)
+
+    execution_time = time.time_ns() - start_time
+    final_grid = np.array(final_state) if final_state is not None else None
+
+    if output_path:
+        path = reconstruct_path(came_from, start_state_tuple, final_state) if final_state else None
+        return final_grid, execution_time, frontier_sizes, nb_state_explored, path
+
+    return final_grid, execution_time, frontier_sizes, nb_state_explored
+
+
+
+OPPOSITE_ACTION = {"haut": "bas", "bas": "haut", "gauche": "droite", "droite": "gauche"}
+
+
+def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
+
+    frontier = [(start_state_tuple, 0, None)]
+    frontier_sizes = []
+    nb_state_explored = 0
+
+ 
+    best_depth = {start_state_tuple: 0}
+    came_from = {}
+
+    final_state = None
+
+    while frontier:
+        frontier_sizes.append(len(frontier))
+
+        current_state, depth, last_action = frontier.pop()
+        nb_state_explored += 1
+
+        if current_state == goal_state_tuple:
+            final_state = current_state
             break
 
         if depth < limit:
-            for nextGrid in getLegalMoves(currentGrid):
-                key = tuple(nextGrid)
-                if key not in visited:
-                    visited.add(key)
-                    stack.append((nextGrid, depth + 1))
+            for child_grid, action in getChildren(np.array(current_state)):
+                
+                if last_action is not None and action == OPPOSITE_ACTION[last_action]:
+                    continue
 
-    return found, iteration, nbState
+                child_state = _to_state(child_grid)
+                new_depth = depth + 1
+
+                if child_state not in best_depth or new_depth < best_depth[child_state]:
+                    best_depth[child_state] = new_depth
+                    came_from[child_state] = (current_state, action)
+                    frontier.append((child_state, new_depth, action))
+
+    return final_state, came_from, frontier_sizes, nb_state_explored
 
 
-def iterativeDeepning(Grid, outputFile="iterative_run.txt", maxLimit=31):
-    """Répète une recherche en profondeur limitée avec une limite qui
-    augmente de 1 à chaque passe (0, 1, 2, ...), jusqu'à trouver l'état
-    objectif. maxLimit est un garde-fou pour éviter une boucle infinie
-    si l'état de départ n'est pas solvable."""
-    startTime = time.time_ns()
+def iterativeDeepning(start_state, output_path=False, max_limit=10):
+    
+    start_state_tuple = _to_state(start_state)
+    goal_state_tuple = _to_state(goal_state)
 
-    tailleFrontier = []
-    iteration = 0
-    nbState = 0
-    found = False
     limit = 0
+    frontier_sizes = []
+    nb_state_explored = 0
+    final_state = None
+    came_from = {}
 
-    while not found and limit <= maxLimit:
-        found, iteration, nbState = depthLimitedSearch(
-            Grid, limit, iteration, nbState, tailleFrontier
+    start_time = time.time_ns()
+
+    while final_state is None and limit <= max_limit:
+        final_state, came_from, sizes_at_limit, nb_at_limit = _depth_limited_search(
+            start_state_tuple, goal_state_tuple, limit
         )
+        frontier_sizes += sizes_at_limit
+        nb_state_explored += nb_at_limit
         limit += 1
 
-    executionTime = time.time_ns() - startTime
+    execution_time = time.time_ns() - start_time
+    final_grid = np.array(final_state) if final_state is not None else None
 
-    with open(outputFile, mode='w', encoding='utf-8') as f:
-        for it, size in tailleFrontier:
-            f.write(f"{it}\t{size}\n")
-        f.write(f"{nbState}\n")
-        f.write(f"{executionTime}\n")
+    if output_path:
+        path = reconstruct_path(came_from, start_state_tuple, final_state) if final_state else None
+        return final_grid, execution_time, frontier_sizes, nb_state_explored, path
 
-    return executionTime, nbState, found
-
-
-# --------------------------------------------------------------------------
-# 10 exécutions, un fichier distinct par exécution
-# --------------------------------------------------------------------------
-if __name__ == "__main__":
-    NB_RUNS = 10
-
-    print("--- Recherche en largeur (BFS) ---")
-    for run in range(1, NB_RUNS + 1):
-        outFile = f"breadth_run_{run}.txt"
-        execTime, nbState, found = breadthSearch(combined, outputFile=outFile)
-
-        status = "trouvé" if found else "NON trouvé"
-        print(
-            f"Run {run:2d} | temps: {execTime:>12} ns | "
-            f"états explorés: {nbState:>6} | objectif {status} | -> {outFile}"
-        )
-
-    print("\n--- Approfondissement itératif (IDDFS) ---")
-    for run in range(1, NB_RUNS + 1):
-        outFile = f"iterative_run_{run}.txt"
-        execTime, nbState, found = iterativeDeepning(combined, outputFile=outFile)
-
-        status = "trouvé" if found else "NON trouvé"
-        print(
-            f"Run {run:2d} | temps: {execTime:>12} ns | "
-            f"états explorés: {nbState:>6} | objectif {status} | -> {outFile}"
-        )
+    return final_grid, execution_time, frontier_sizes, nb_state_explored
