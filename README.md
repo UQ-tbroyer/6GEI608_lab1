@@ -25,9 +25,9 @@ Le tableau ci-dessous représente les performances moyennes des trois algorithme
 
 | Algorithme | Temps moyen (s) | Nombre d'états explorés moyen | Taille de la file frontière moyenne |
 |---|---:|---:|---:|
-| Largeur | 4,17 | 85 720 | 9 676 |
-| Profondeur | 2,74 | 64 291 | 42 993 |
-| Approfondissement itératif (10 de profondeur) | 0,021 | 2 239 | 1 |
-| Approfondissement itératif (31 de profondeur) | 34,94 | 831 815 | 13 |
+| Largeur | 7,33 | 109 550 | 116 806 |
+| Profondeur | 3,72 | 93 579 | 140960 |
+| Approfondissement itératif (10 de profondeur) | 0,043 | 2025 | 2025 |
+| Approfondissement itératif (31 de profondeur) | 62,43 | 1 896 100  | 1 896 107 |
 
 Bien que les temps moyens de la recherche par largeur et par profondeur pourraient indiquer que la recherche en profondeur est toujours meilleure, une façon plus nuancée de voir les choses serait de dire que la recherche en largeur est plus performante lorsqu'il y a moins d'étapes à explorer et la recherche en profondeur est plus performante lorsqu'il y en a plus. Aussi, l'approfondissement itératif peut se montrer extrêmement rapide avec les solutions qui ont peu d'états à explorer (plus que par la recherche en largeur), mais pour cela il faut s'assurer d'avoir un petit *cutoff* qui permettra quand même de trouver la solution.
