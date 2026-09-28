@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-
+from functools import partial
 import data
 import search
 
@@ -27,23 +27,21 @@ def read_puzzle(file_path):
     return np.array(values, dtype=int)
 
 
-#index = 4
+
 for index in range(1,5):
     puzzle_file = f'Ex1-{index}.txt'
     start_state = read_puzzle(puzzle_file)
 
-    # Dossier propre à cet exercice : sert de signature (puisque le nom des
-    # fichiers produits par writeData ne contient plus l'index de l'exercice).
     output_dir = os.path.join("resultats", f"Ex1-{index}")
 
     algorithms = [
         ('depth', search.depthSearch),
         ('breadth', search.breadthSearch),
         ('iterative', search.iterativeDeepning),
+        ('astar_manhattan', partial(search.aStarSearch, heuristic=search.manhattan)),
+        ('astar_tuiles_mal_placees', partial(search.aStarSearch, heuristic=search.misplaced_tiles)),
     ]
 
-    # 1) Chemin des actions à suivre pour atteindre l'état objectif
-    #    (exigence principale de l'énoncé), une résolution par algorithme.
     print(f"État initial (Ex1-{index}) :", start_state)
     print("\n=== Chemin des actions ===")
     for name, algo in algorithms:
@@ -51,13 +49,11 @@ for index in range(1,5):
             start_state, output_path=True
         )
         if path is not None:
-            print(f"{name:>10} : {len(path)} mouvements -> {path}")
+            print(f"{name:>25} : {len(path)} mouvements -> {path}")
             data.writePath(name, path, outputDir=output_dir)
         else:
-            print(f"{name:>10} : objectif NON trouvé")
+            print(f"{name:>25} : objectif NON trouvé")
 
-    # 2) 10 exécutions par algorithme pour les statistiques de performance
-    #    (temps, nombre cumulé d'états générés, nombre d'états explorés).
     NB_RUNS = 10
     print("\n=== Statistiques (10 exécutions par algorithme) ===")
     for name, algo in algorithms:

@@ -1,4 +1,5 @@
 import time
+import heapq
 from collections import deque
 
 import numpy as np
@@ -7,25 +8,6 @@ goal_state = np.array([1, 2, 3, 4, 5, 6, 7, 8, 0])
 
 DIRECTIONS = {-3: "haut", 3: "bas", -1: "gauche", 1: "droite"}
 
-import time
-import csv
-
-
-combined = []
-
-with open('Ex1-1.txt', mode='r', encoding='utf-8', newline='') as file:
-    csv_reader = csv.reader(file, delimiter='\t')
-    for row in csv_reader:
-        row = [int(val) if val.strip() != '' else 0 for val in row]
-        combined += row  # ajoute les éléments de row à la suite de combined
-
-combined = np.array(combined)
-print(combined)
-
-
-# --------------------------------------------------------------------------
-# Déplacement par matrice de permutation (code fourni, conservé tel quel)
-# --------------------------------------------------------------------------
 def move(grid, basePos, endPos):
     moveGrid = np.array([[1,0,0,0,0,0,0,0,0],
                         [0,1,0,0,0,0,0,0,0],
@@ -69,7 +51,7 @@ def getChildren(grid):
 
 
 def reconstruct_path(came_from, start_state, goal_state_tuple):
-    
+
     actions = []
     state = goal_state_tuple
     while state != start_state:
@@ -198,7 +180,7 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
     generated_states = 1
     nb_state_explored = 0
 
- 
+
     best_depth = {start_state_tuple: 0}
     came_from = {}
 
@@ -217,7 +199,7 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
 
         if depth < limit:
             for child_grid, action in getChildren(np.array(current_state)):
-                
+
                 if last_action is not None and action == OPPOSITE_ACTION[last_action]:
                     continue
 
@@ -235,7 +217,7 @@ def _depth_limited_search(start_state_tuple, goal_state_tuple, limit):
 
 
 def iterativeDeepning(start_state, output_path=False, max_limit=31):
-    
+
     start_state_tuple = _to_state(start_state)
     goal_state_tuple = _to_state(goal_state)
 
@@ -264,3 +246,63 @@ def iterativeDeepning(start_state, output_path=False, max_limit=31):
         return final_grid, execution_time, frontier_sizes, nb_state_explored, path
 
     return final_grid, execution_time, frontier_sizes, nb_state_explored
+
+def manhattan(state):
+    distance = 0
+    for index, value in enumerate(state):
+        if value != 0:
+            row, col = divmod(index, 3)
+            goal_row, goal_col = divmod(value - 1, 3)
+            distance += abs(row - goal_row) + abs(col - goal_col)
+    return distance
+
+
+def misplaced_tiles(state):
+    return sum(1 for index, value in enumerate(state) if value != 0 and value != index + 1)
+
+
+HEURISTICS = {"manhattan": manhattan, "tuiles_mal_placees": misplaced_tiles}
+
+
+def aStarSearch(start_state, output_path=False, heuristic=manhattan):
+    start_state_tuple = _to_state(start_state)
+    goal_state_tuple = _to_state(goal_state)
+
+    frontier = [(heuristic(start_state_tuple), 0, start_state_tuple)]
+    explored_sizes = []          
+    nb_iterations = 0
+    visited = set()
+    best_cost = {start_state_tuple: 0}
+    came_from = {}
+
+    start_time = time.time_ns()
+    final_state = None
+
+    while frontier:
+        _, cost, current_state = heapq.heappop(frontier)
+        if current_state in visited:
+            continue
+        visited.add(current_state)
+        nb_iterations += 1
+        explored_sizes.append(len(visited))
+
+        if current_state == goal_state_tuple:
+            final_state = current_state
+            break
+
+        for child_grid, action in getChildren(np.array(current_state)):
+            child_state = _to_state(child_grid)
+            new_cost = cost + 1
+            if child_state not in visited and new_cost < best_cost.get(child_state, float("inf")):
+                best_cost[child_state] = new_cost
+                came_from[child_state] = (current_state, action)
+                heapq.heappush(frontier, (new_cost + heuristic(child_state), new_cost, child_state))
+
+    execution_time = time.time_ns() - start_time
+    final_grid = np.array(final_state) if final_state is not None else None
+
+    if output_path:
+        path = reconstruct_path(came_from, start_state_tuple, final_state) if final_state else None
+        return final_grid, execution_time, explored_sizes, nb_iterations, path
+
+    return final_grid, execution_time, explored_sizes, nb_iterations

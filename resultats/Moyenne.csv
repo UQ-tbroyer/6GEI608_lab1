@@ -1,0 +1,4 @@
+Algorithm	Problems	Runs	Avg time (s)	Avg iterations	Avg explored	Avg generated
+breadth	4	40	7.334282	109550.00	109550.00	116806.00
+depth	4	40	3.718378	108716.25	93578.50	140960.25
+iterative	4	40	62.434674	1896100.50	1896100.50	1896107.75
