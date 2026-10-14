@@ -35,9 +35,6 @@ for index in range(1,5):
     output_dir = os.path.join("resultats", f"Ex1-{index}")
 
     algorithms = [
-        ('depth', search.depthSearch),
-        ('breadth', search.breadthSearch),
-        ('iterative', search.iterativeDeepning),
         ('astar_manhattan', partial(search.aStarSearch, heuristic=search.manhattan)),
         ('astar_tuiles_mal_placees', partial(search.aStarSearch, heuristic=search.misplaced_tiles)),
     ]
